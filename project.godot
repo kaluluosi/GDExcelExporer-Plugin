@@ -1,0 +1,32 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[GDExcelExporter]
+
+SettingsDir="res://settings"
+cmd_path="ee"
+
+[application]
+
+config/name="Gd Eexcel Exporer-plugin"
+config/features=PackedStringArray("4.0", "Forward Plus")
+config/icon="res://icon.svg"
+
+[autoload]
+
+settings="*res://settings/dist/settings.gd"
+
+[dotnet]
+
+project/assembly_name="Gd Eexcel Exporer-plugin"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/GDExcelExporter/plugin.cfg")

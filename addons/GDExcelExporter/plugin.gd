@@ -1,5 +1,8 @@
-tool
+@tool
 extends EditorPlugin
+
+var btn_export:Button = null
+
 
 var settings_dir = {
 	"name": "GDExcelExporter/SettingsDir",
@@ -13,57 +16,76 @@ var	ee_path = {
 		"hint": PROPERTY_HINT_DIR,
 		"hint_string":"ee命令或者ee.exe路径"
 	}
+	
+var _dialog_size:Vector2i = Vector2i(500,200)
 
 func _enter_tree():
+	
 	if not ProjectSettings.has_setting(settings_dir.name):
-		ProjectSettings.set_setting(settings_dir.name, "res://Settings")
+		ProjectSettings.set_setting(settings_dir.name, "res://settings")
 		ProjectSettings.add_property_info(settings_dir)
-		ProjectSettings.set_initial_value(settings_dir.name, "res://Settings")
+		ProjectSettings.set_initial_value(settings_dir.name, "res://settings")
 	
 	if not ProjectSettings.has_setting(ee_path.name):
 		ProjectSettings.set_setting(ee_path.name, "ee")
 		ProjectSettings.add_property_info(ee_path)
 		ProjectSettings.set_initial_value(settings_dir.name, "ee")
 	
-	add_tool_menu_item("ExcelExport", self, "gen_all")
+	btn_export = Button.new()
+	btn_export.icon = load("res://addons/GDExcelExporter/Excel.svg")
+	btn_export.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	btn_export.button_down.connect(gen_all)
+	btn_export.tooltip_text = "GDExcelExporter导表"
+	
+	add_tool_menu_item("ExcelExport", gen_all)
+	add_control_to_container(CONTAINER_TOOLBAR,btn_export)
 
 func _exit_tree():
 	remove_tool_menu_item("ExcelExport")
-
-func gen_all(ud):
+	remove_control_from_container(CONTAINER_TOOLBAR, btn_export)
 	
-	var settings = ProjectSettings[settings_dir.name]
+
+func gen_all():
+	
+	var settings_dir_path = ProjectSettings[settings_dir.name]
 	var ee = ProjectSettings[ee_path.name]
 	
-	var dir = Directory.new()
-	if not dir.dir_exists(settings):
+	
+
+	if not DirAccess.dir_exists_absolute(settings_dir_path):
 		var warning_box =AcceptDialog.new()
-		warning_box.dialog_text = settings + " 目录不存在！"
-		warning_box.window_title = "警告！GDExcelExporter"
+		warning_box.dialog_text = settings_dir_path + " 目录不存在！"
+		warning_box.title = "[警告]GDExcelExporter"
 		get_editor_interface().get_editor_viewport().add_child(warning_box)
-		warning_box.popup_centered(Vector2(100,100))
+		warning_box.popup_centered(_dialog_size)
 	else:
-		var abs_path = ProjectSettings.globalize_path(settings)
+		var abs_path = ProjectSettings.globalize_path(settings_dir_path)
 		var warning_box =AcceptDialog.new()
-		warning_box.dialog_text = settings + "导出中..."
-		warning_box.window_title = "GDExcelExporter"
-		get_editor_interface().get_editor_viewport().add_child(warning_box)
-		warning_box.popup_centered()
-		yield(get_tree(),"physics_frame")
+		warning_box.title = "[导出]GDExcelExporter"
+		warning_box.dialog_text = "导出中..." # 显示不出来，留着吧
+		get_editor_interface().get_viewport().add_child(warning_box)
+		warning_box.popup_centered(_dialog_size)
+		
+		await get_tree().process_frame
 
 		var output = []
 		print("=".repeat(10))
 		print("导出",abs_path,"下面的所有表")
-		OS.execute(ee,["gen-all","--cwd",abs_path],true,output)
+		OS.execute("CMD.exe",["/c",ee,"gen-all","--cwd",abs_path],output,true)
 		for line in output:
 			print(line)
 			
 		print("导表结束！")
 		print("=".repeat(10))
 		
-		warning_box.dialog_text = "导出结束!"
+		warning_box.title = "[导出结束]GDExcelExporter"
+		warning_box.dialog_text = "\n".join(output)
 		
-		yield(warning_box,"confirmed")
+		await warning_box.confirmed
 		warning_box.queue_free() # 得手动销毁，不然会一直编辑器树里
 		
-		get_editor_interface().get_resource_filesystem().scan()
+		# 触发godot扫描文件改动以重新导入
+		# XXX: 并没有达到我想要的效果，这里触发的扫描不会重新加载导出的gd脚本
+		# XXX: 目前没有办法在编辑器里面重新载入脚本，但是你可以在脚本编辑器中随便保存一下Godot会识别到导出脚本有更新
+		var resource_fs = get_editor_interface().get_resource_filesystem()
+		resource_fs.scan()
