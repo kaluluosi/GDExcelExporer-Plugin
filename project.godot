@@ -11,7 +11,7 @@ config_version=5
 [GDExcelExporter]
 
 SettingsDir="res://settings"
-cmd_path="ee"
+cmd_path="res://addons/GDExcelExporter/ee.exe"
 
 [application]
 

@@ -22,15 +22,15 @@ var _dialog_size:Vector2i = Vector2i(500,200)
 func _enter_tree():
 	
 	if not ProjectSettings.has_setting(settings_dir.name):
-		ProjectSettings.set_setting(settings_dir.name, "res://settings")
 		ProjectSettings.add_property_info(settings_dir)
 		ProjectSettings.set_initial_value(settings_dir.name, "res://settings")
+		ProjectSettings.set_setting(settings_dir.name, "res://settings")
 	
 	if not ProjectSettings.has_setting(ee_path.name):
-		ProjectSettings.set_setting(ee_path.name, "ee")
 		ProjectSettings.add_property_info(ee_path)
 		ProjectSettings.set_initial_value(settings_dir.name, "ee")
-	
+		ProjectSettings.set_setting(ee_path.name, "res://addons/GDExcelExporter/ee.exe")
+		
 	btn_export = Button.new()
 	btn_export.icon = load("res://addons/GDExcelExporter/Excel.svg")
 	btn_export.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -47,11 +47,9 @@ func _exit_tree():
 
 func gen_all():
 	
-	var settings_dir_path = ProjectSettings[settings_dir.name]
-	var ee = ProjectSettings[ee_path.name]
+	var settings_dir_path = ProjectSettings.get_setting(settings_dir.name)
+	var ee = ProjectSettings.get_setting(ee_path.name)
 	
-	
-
 	if not DirAccess.dir_exists_absolute(settings_dir_path):
 		var warning_box =AcceptDialog.new()
 		warning_box.dialog_text = settings_dir_path + " 目录不存在！"
@@ -71,13 +69,15 @@ func gen_all():
 		var output = []
 		print("=".repeat(10))
 		print("导出",abs_path,"下面的所有表")
-		OS.execute("CMD.exe",["/c",ee,"gen-all","--cwd",abs_path],output,true)
+		ee_path = ProjectSettings.globalize_path(ee)
+		OS.execute("CMD.exe",["/c",ee_path,"gen-all","--cwd",abs_path],output,true)
 		for line in output:
 			print(line)
 			
 		print("导表结束！")
 		print("=".repeat(10))
-		
+		output.push_front("ee_path:"+ee_path)
+
 		warning_box.title = "[导出结束]GDExcelExporter"
 		warning_box.dialog_text = "\n".join(output)
 		
