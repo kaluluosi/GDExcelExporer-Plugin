@@ -3,33 +3,16 @@ extends EditorPlugin
 
 var btn_export:Button = null
 
-
-var settings_dir_property = {
-	"name": "GDExcelExporter/SettingsDir",
-	"type": TYPE_STRING,
-	"hint": PROPERTY_HINT_DIR,
-	"hint_string": "配置表所在目录"
-}
-var	ee_path_property = {
-		"name": "GDExcelExporter/cmd_path",
-		"type":TYPE_STRING,
-		"hint": PROPERTY_HINT_DIR,
-		"hint_string":"ee命令或者ee.exe路径"
-	}
+var P_SETTINGS_DIR = "addons/gd_excelexporter/settings_dir"
+var P_EE_PATH = "addons/gd_excelexporter/cmd_path"
 	
-var _dialog_size:Vector2i = Vector2i(500,200)
+var DIALOG_SIZE:Vector2i = Vector2i(500,200)
 
 func _enter_tree():
-	
-	if not ProjectSettings.has_setting(settings_dir_property.name):
-		ProjectSettings.add_property_info(settings_dir_property)
-		ProjectSettings.set_initial_value(settings_dir_property.name, "res://settings")
-		ProjectSettings.set_setting(settings_dir_property.name, "res://settings")
-	
-	if not ProjectSettings.has_setting(ee_path_property.name):
-		ProjectSettings.add_property_info(ee_path_property)
-		ProjectSettings.set_initial_value(settings_dir_property.name, "ee")
-		ProjectSettings.set_setting(ee_path_property.name, "res://addons/GDExcelExporter/ee.exe")
+		
+	## 项目设置-添加设置
+	_add_custom_project_setting(P_SETTINGS_DIR,"res://settings",TYPE_STRING, PROPERTY_HINT_DIR,"配置表所在目录")
+	_add_custom_project_setting(P_EE_PATH,"res://addons/GDExcelExporter/ee.exe",TYPE_STRING,PROPERTY_HINT_DIR,"ee命令或者ee.exe路径")
 		
 	btn_export = Button.new()
 	btn_export.icon = load("res://addons/GDExcelExporter/Excel.svg")
@@ -44,11 +27,38 @@ func _exit_tree():
 	remove_tool_menu_item("ExcelExport")
 	remove_control_from_container(CONTAINER_TOOLBAR, btn_export)
 	
+	for setting in custom_settings:
+		_remove_custom_project_setting(setting)
+
+var custom_settings = {}
+func _add_custom_project_setting(setting_name: String, default_value, type: int, hint: int=PROPERTY_HINT_NONE, hint_string: String="", basic: bool=true) -> void:
+	custom_settings[setting_name] = true
+	if ProjectSettings.has_setting(setting_name):
+		return
+	var setting_info: Dictionary = {
+		"name": setting_name,
+		"type": type,
+		"hint": hint,
+		"hint_string": hint_string,
+	}
+
+	ProjectSettings.set_setting(setting_name, default_value)
+	
+	ProjectSettings.add_property_info(setting_info)
+	ProjectSettings.set_initial_value(setting_name, default_value)
+	ProjectSettings.set_as_basic(setting_name, basic) # 设置为基本设置，非基本设置只能在高级看到
+	printt("添加项目配置属性", setting_name)
+
+func _remove_custom_project_setting(name: String):
+	if ProjectSettings.has_setting(name):
+		ProjectSettings.clear(name)
+		ProjectSettings.save()
+
 
 func gen_all():
 	
-	var settings_dir_path = ProjectSettings.get_setting(settings_dir_property.name)
-	var ee_path = ProjectSettings.get_setting(ee_path_property.name)
+	var settings_dir_path = ProjectSettings.get_setting(P_SETTINGS_DIR)
+	var ee_path = ProjectSettings.get_setting(P_EE_PATH)
 	
 	
 	var settings_abs_path = ProjectSettings.globalize_path(settings_dir_path)
@@ -59,7 +69,7 @@ func gen_all():
 		warning_box.dialog_text = settings_abs_path + " 目录不存在！"
 		warning_box.title = "[警告]GDExcelExporter"
 		get_editor_interface().get_editor_viewport().add_child(warning_box)
-		warning_box.popup_centered(_dialog_size)
+		warning_box.popup_centered(DIALOG_SIZE)
 	else:
 		
 		var warning_box =AcceptDialog.new()
@@ -69,7 +79,7 @@ func gen_all():
 		warning_box.title = "[导出]GDExcelExporter"
 		warning_box.dialog_text = "导出中..." # TODO: 显示不出来，留着吧
 		# 弹出到中间
-		warning_box.popup_centered(_dialog_size)
+		warning_box.popup_centered(DIALOG_SIZE)
 		
 		# 等待一帧防止卡住无法弹出
 		await get_tree().process_frame
@@ -91,9 +101,9 @@ func gen_all():
 		
 		await warning_box.confirmed
 		warning_box.queue_free() # 得手动销毁节点，不然会一直编辑器树里
+
 		
-		# 触发godot扫描文件改动以重新导入
-		# XXX: 并没有达到我想要的效果，这里触发的扫描不会重新加载导出的gd脚本
-		# XXX: 目前没有办法在编辑器里面重新载入脚本，但是你可以在脚本编辑器中随便保存一下Godot会识别到导出脚本有更新
-		var resource_fs = get_editor_interface().get_resource_filesystem()
-		resource_fs.scan()
+
+
+
+
